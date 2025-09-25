@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{csrfToken}}">
+  <title>JWT Auth Tester</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>JWT Authentication Tester</h1>
+    
+    <!-- Auth Section -->
+    <div class="auth-section">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="login">Login</button>
+        <button class="tab-btn" data-tab="register">Register</button>
+      </div>
+      
+      <!-- Login Form -->
+      <div id="login-form" class="tab-content active">
+        <h2>Login</h2>
+        <form id="login">
+          <div class="form-group">
+            <label for="login-email">Email:</label>
+            <input type="email" id="login-email" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password:</label>
+            <input type="password" id="login-password" required>
+          </div>
+          <button type="submit">Login</button>
+        </form>
+      </div>
+      
+      <!-- Register Form -->
+      <div id="register-form" class="tab-content">
+        <h2>Register</h2>
+        <form id="register">
+          <div class="form-group">
+            <label for="reg-username">Username:</label>
+            <input type="text" id="reg-username" required>
+          </div>
+          <div class="form-group">
+            <label for="reg-email">Email:</label>
+            <input type="email" id="reg-email" required>
+          </div>
+          <div class="form-group">
+            <label for="reg-password">Password:</label>
+            <input type="password" id="reg-password" required>
+          </div>
+          <div class="form-group">
+            <label for="reg-firstname">First Name:</label>
+            <input type="text" id="reg-firstname">
+          </div>
+          <div class="form-group">
+            <label for="reg-lastname">Last Name:</label>
+            <input type="text" id="reg-lastname">
+          </div>
+          <button type="submit">Register</button>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Protected Routes Section -->
+    <div class="protected-section" id="protected-section" style="display: none;">
+      <h2>Protected Route Tester</h2>
+      <div class="token-display">
+        <h3>Your Token:</h3>
+        <textarea id="jwt-token" readonly></textarea>
+      </div>
+      
+      <div class="protected-actions">
+        <button id="get-profile">Get Profile</button>
+        <button id="admin-action">Admin Action</button>
+        <button id="logout">Logout</button>
+      </div>
+      
+      <div class="response-container">
+        <h3>API Response:</h3>
+        <pre id="api-response">No requests made yet...</pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
