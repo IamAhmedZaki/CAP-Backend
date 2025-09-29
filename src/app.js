@@ -3,6 +3,7 @@ const express = require('express');
 const sendEmailRoutes = require('./routes/sendEmail.routes');
 const cors = require('cors');
 const path = require('path');
+const { handleStripeWebhook } = require('./controllers/stripeWebHook');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 app.use('/api/sendEmail', sendEmailRoutes);
 
 // Redirect root to index.html
+app.post('/api/sendEmail/stripe-webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });

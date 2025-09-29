@@ -489,140 +489,118 @@ const capOrderAdminEmail = (orderData) => {
 };
 
 
-const sendCapEmail = async (req, res) => {
+const sendCapEmail = async (order) => {
   try {
-    const {
-      customerDetails,
-      selectedOptions,
-      totalPrice,
-      currency,
-      orderNumber,
-      orderDate,
-      email
-    } = req.body;
-
-    // Validate required fields
-    if (!customerDetails || !selectedOptions || !email) {
-      return res.status(400).json({ 
-        message: 'Missing required fields: customerDetails, selectedOptions, and email are required' 
-      });
-    }
-
     const transporter = createEmailTransporter();
-    const emailContent = capOrderEmail({
-      customerDetails,
-      selectedOptions,
-      totalPrice: totalPrice || '299.00',
-      currency: currency || 'DKK',
-      orderNumber: orderNumber || `CAP-${Date.now()}`,
-      orderDate: orderDate || new Date().toISOString()
-    });
-    const emailContentAdmin = capOrderAdminEmail({
-      customerDetails,
-      selectedOptions,
-      totalPrice: totalPrice || '299.00',
-      currency: currency || 'DKK',
-      orderNumber: orderNumber || `CAP-${Date.now()}`,
-      orderDate: orderDate || new Date().toISOString()
-    });
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      to: email,
-      subject: emailContent.subject,
-      html: emailContent.html,
-      text: emailContent.text
-    };
-    
-    const mailOptionsAdmin = {
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      to: "mahmedzaki670@gmail.com",
-      subject: emailContentAdmin.subject,
-      html: emailContentAdmin.html,
-      text: emailContentAdmin.text
-    };
-    // Send email
-    const emailResult = await transporter.sendMail(mailOptions);
-    const emailResultAdmin = await transporter.sendMail(mailOptionsAdmin);
-    
-    // Optionally save to database using Prisma
-    try {
-      const orderData = {
-        customerDetails,
-        selectedOptions,
-        totalPrice: parseFloat(totalPrice) || 299.00,
-        currency: currency || 'DKK',
-        orderNumber: orderNumber || `CAP-${Date.now()}`,
-        orderDate: orderDate ? new Date(orderDate) : new Date(),
-        customerEmail: email,
-        status: 'PENDING'
-      };
+    const emailContent = capOrderEmail(order);
+    const emailContentAdmin = capOrderAdminEmail(order);
 
-      const result = await prisma.order.create({
-        data: orderData
-      });
+    // send both emails in parallel
+    await Promise.all([
+      transporter.sendMail({
+        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        to: order.email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
+      }),
+      transporter.sendMail({
+        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        to: 'mahmedzaki670@gmail.com',
+        subject: emailContentAdmin.subject,
+        html: emailContentAdmin.html,
+        text: emailContentAdmin.text,
+      }),
+    ]);
 
-      res.status(200).json({
-        message: 'Order created and email sent successfully',
-        orderId: result.id,
-        orderNumber: result.orderNumber,
-        emailResult: {
-          messageId: emailResult.messageId,
-          accepted: emailResult.accepted
-        }
-      });
-    } catch (dbError) {
-      console.error('Database Error:', dbError);
-      // Still return success for email even if DB fails
-      res.status(200).json({
-        message: 'Email sent successfully but database save failed',
-        emailResult: {
-          messageId: emailResult.messageId,
-          accepted: emailResult.accepted
-        },
-        warning: 'Order not saved to database'
-      });
-    }
+    // Save order in DB
+    // await prisma.order.create({
+    //   data: {
+    //     orderNumber: order.orderNumber,
+    //     customerDetails: order.customerDetails,
+    //     selectedOptions: order.selectedOptions,
+    //     totalPrice: order.totalPrice,
+    //     currency: order.currency,
+    //     customerEmail: order.email,
+    //     status: 'PAID',
+    //     stripeSessionId: order.stripeSessionId, // ensure this field exists in DB
+    //     orderDate: order.orderDate,
+    //   },
+    // });
 
-  } catch (error) {
-    console.error('Send Cap Email Error:', error);
-    res.status(500).json({ 
-      message: 'Internal Server Error', 
-      error: error.message 
-    });
+    console.log('Email sent and order saved:', order.orderNumber);
+  } catch (err) {
+    console.error('sendCapEmailLogic error:', err);
+    // decide whether to bubble up error or log and continue
+    throw err;
   }
 };
 
-const stripePayment=async (req,res) => {
-  const { orderNumber, totalPrice, email } = req.body;
+// const stripePayment=async (req,res) => {
+//   const { orderNumber, totalPrice, email } = req.body;
 
+//   try {
+//     const session = await stripe.checkout.sessions.create({
+//       payment_method_types: ["card"],
+//       customer_email: email,
+//       line_items: [
+//         {
+//           price_data: {
+//             currency: "dkk",
+//             product_data: {
+//               name: `Cap Order : ${orderNumber}`,
+//             },
+//             unit_amount: totalPrice * 100, // Stripe expects øre (cents)
+//           },
+//           quantity: 1,
+//         },
+//       ],
+//       mode: "payment",
+//       success_url: "http://elipsestudio.com/studentlife/success?session_id={CHECKOUT_SESSION_ID}",
+// cancel_url: "http://elipsestudio.com/studentlife/cancel",
+//     });
+
+//     res.json({ id: session.id });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+
+// }
+
+const stripePayment = async (req, res) => {
   try {
+    const orderData = req.body.orderData; // frontend sends the whole orderData object
+    const { orderNumber, totalPrice, email } = orderData;
+
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      payment_method_types: ['card'],
       customer_email: email,
       line_items: [
         {
           price_data: {
-            currency: "dkk",
-            product_data: {
-              name: `Cap Order : ${orderNumber}`,
-            },
-            unit_amount: totalPrice * 100, // Stripe expects øre (cents)
+            currency: (orderData.currency || 'DKK').toLowerCase(),
+            product_data: { name: `Cap Order : ${orderNumber}` },
+            unit_amount: Math.round(parseFloat(totalPrice) * 100),
           },
           quantity: 1,
         },
       ],
-      mode: "payment",
-      success_url: "http://elipsestudio.com/studentlife/success?session_id={CHECKOUT_SESSION_ID}",
-cancel_url: "http://elipsestudio.com/studentlife/cancel",
+      mode: 'payment',
+      success_url: 'hhttp://elipsestudio.com/studentlife/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: 'http://elipsestudio.com/studentlife/cancel',
+      metadata: {
+        // put whatever you need in metadata; stringify complex objects
+        orderData: JSON.stringify(orderData),
+      },
     });
 
     res.json({ id: session.id });
   } catch (err) {
+    console.error('Create Checkout Session Error:', err);
     res.status(500).json({ error: err.message });
   }
-
-}
+};
 
 const getSessionDetails = async (req, res) => {
   const { session_id } = req.query;
