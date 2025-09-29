@@ -1,4 +1,5 @@
-
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 const nodemailer = require('nodemailer');
 const Stripe = require('stripe');
 
@@ -570,28 +571,41 @@ const sendCapEmail = async (order) => {
 
 const stripePayment = async (req, res) => {
   try {
-    const orderData = req.body.orderData; // frontend sends the whole orderData object
-    const { orderNumber, totalPrice, email } = orderData;
+    const orderData = req.body.orderData;
 
+    // 1. Save order in DB
+    const newOrder = await prisma.order.create({
+      data: {
+        orderNumber: orderData.orderNumber,
+        email: orderData.email,
+        totalPrice: parseFloat(orderData.totalPrice),
+        currency: orderData.currency || 'DKK',
+        customerName: orderData.customerDetails?.name || '',
+        customerPhone: orderData.customerDetails?.phone || '',
+        customerAddress: orderData.customerDetails?.address || '',
+        selectedOptions: orderData.selectedOptions,
+      },
+    });
+
+    // 2. Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      customer_email: email,
+      customer_email: orderData.email,
       line_items: [
         {
           price_data: {
             currency: (orderData.currency || 'DKK').toLowerCase(),
-            product_data: { name: `Cap Order : ${orderNumber}` },
-            unit_amount: Math.round(parseFloat(totalPrice) * 100),
+            product_data: { name: `Cap Order : ${orderData.orderNumber}` },
+            unit_amount: Math.round(parseFloat(orderData.totalPrice) * 100),
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
-      success_url: 'hhttp://elipsestudio.com/studentlife/success?session_id={CHECKOUT_SESSION_ID}',
+      success_url: 'http://elipsestudio.com/studentlife/success?session_id={CHECKOUT_SESSION_ID}',
       cancel_url: 'http://elipsestudio.com/studentlife/cancel',
       metadata: {
-        // put whatever you need in metadata; stringify complex objects
-        orderData: JSON.stringify(orderData),
+        orderId: newOrder.id, // keep only ID here to avoid 500 char limit
       },
     });
 

@@ -1,7 +1,9 @@
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 const Stripe = require('stripe');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // const { sendCapEmail } = require('./emailController'); // reusable logic
-// const prisma = require('../prismaClient'); 
+const prisma = require('../prismaClient'); 
 const { sendCapEmail } = require('./sendEmail.controller');
 
 const handleStripeWebhook = async (req, res) => {
