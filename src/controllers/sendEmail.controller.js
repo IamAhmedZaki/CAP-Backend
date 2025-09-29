@@ -68,64 +68,64 @@ Your Company Team`
 
 const workflowStatusChange=async(req,res)=>{
 
-     try {
-    const { id } = req.params;
-    const {
+  //    try {
+  //   const { id } = req.params;
+  //   const {
       
-      currentStage,
+  //     currentStage,
      
-      updatedBy,
-      // Optional: new list of sizes to replace
-    } = req.body;
+  //     updatedBy,
+  //     // Optional: new list of sizes to replace
+  //   } = req.body;
 
-    const existingOrderItem = await prisma.orderItem.findUnique({
-      where: { id: parseInt(id) },
-      include: { order:{
-        include:{
-            customer:true
-        }
-      },
-    product:true },
-    });
+  //   const existingOrderItem = await prisma.orderItem.findUnique({
+  //     where: { id: parseInt(id) },
+  //     include: { order:{
+  //       include:{
+  //           customer:true
+  //       }
+  //     },
+  //   product:true },
+  //   });
 
-    if (!existingOrderItem) {
-      return res.status(404).json({ message: 'OrderItem not found' });
-    }
+  //   if (!existingOrderItem) {
+  //     return res.status(404).json({ message: 'OrderItem not found' });
+  //   }
 
-    // Update main order item fields
-    const updatedOrderItem = await prisma.orderItem.update({
-      where: { id: parseInt(id) },
-      data: {
+  //   // Update main order item fields
+  //   const updatedOrderItem = await prisma.orderItem.update({
+  //     where: { id: parseInt(id) },
+  //     data: {
         
-        currentStage,
+  //       currentStage,
         
-        updatedBy,
-      },
-    });
+  //       updatedBy,
+  //     },
+  //   });
 
-    const transporter = createEmailTransporter();
-    const emailContent = generateWorkFlowChangeEmail(existingOrderItem, existingOrderItem.order.customer, existingOrderItem.order,currentStage);
+  //   const transporter = createEmailTransporter();
+  //   const emailContent = generateWorkFlowChangeEmail(existingOrderItem, existingOrderItem.order.customer, existingOrderItem.order,currentStage);
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      to: existingOrderItem.order.customer.email,
-      subject: emailContent.subject,
-      html: emailContent.html,
-      text: emailContent.text
-    };
+  //   const mailOptions = {
+  //     from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+  //     to: existingOrderItem.order.customer.email,
+  //     subject: emailContent.subject,
+  //     html: emailContent.html,
+  //     text: emailContent.text
+  //   };
 
-    const resultDeEmail = await transporter.sendMail(mailOptions);
+  //   const resultDeEmail = await transporter.sendMail(mailOptions);
     
-    const result = await prisma.orderItem.findUnique({
-      where: { id: parseInt(id) },
+  //   const result = await prisma.orderItem.findUnique({
+  //     where: { id: parseInt(id) },
       
-    });
+  //   });
 
-    res.status(200).json(result);
-  } catch (error) {
-    console.error('Update OrderItem Error:', error);
-    res.status(500).json({ message: 'Internal Server Error', error: error.message });
-  }
+  //   res.status(200).json(result);
+  // } catch (error) {
+  //   console.error('Update OrderItem Error:', error);
+  //   res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  // }
     
 
 }
